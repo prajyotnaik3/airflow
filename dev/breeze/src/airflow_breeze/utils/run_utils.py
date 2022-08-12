@@ -46,7 +46,6 @@ def run_command(
     env: Optional[Mapping[str, str]] = None,
     cwd: Optional[Path] = None,
     input: Optional[str] = None,
-    enabled_output_group: bool = False,
     **kwargs,
 ) -> RunCommandResult:
     """
@@ -69,7 +68,6 @@ def run_command(
     :param env: mapping of environment variables to set for the run command
     :param cwd: working directory to set for the command
     :param input: input string to pass to stdin of the process
-    :param enabled_output_group: if set to true, in CI the logs will be placed in separate, foldable group.
     :param kwargs: kwargs passed to POpen
     """
     if not title:
@@ -103,7 +101,9 @@ def run_command(
         cmd_env.setdefault("HOME", str(Path.home()))
         if env:
             cmd_env.update(env)
-        with ci_group(title=f"Output of {title}", enabled=enabled_output_group):
+        if 'capture_output' in kwargs and kwargs['capture_output']:
+            return subprocess.run(cmd, input=input, check=check, env=cmd_env, cwd=workdir, **kwargs)
+        with ci_group("Output:"):
             return subprocess.run(cmd, input=input, check=check, env=cmd_env, cwd=workdir, **kwargs)
     except subprocess.CalledProcessError as ex:
         if not no_output_dump_on_exception:
